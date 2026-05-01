@@ -92,6 +92,7 @@ public class AuthController {
             if (userDetails.getName() != null) user.setName(userDetails.getName());
             if (userDetails.getPhone() != null) user.setPhone(userDetails.getPhone());
             if (userDetails.getSpecialty() != null) user.setSpecialty(userDetails.getSpecialty());
+            if (userDetails.getRole() != null) user.setRole(userDetails.getRole());
             return ResponseEntity.ok(userRepository.save(user));
         }).orElse(ResponseEntity.notFound().build());
     }

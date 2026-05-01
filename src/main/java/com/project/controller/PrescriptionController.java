@@ -1,7 +1,7 @@
 package com.project.controller;
 
 import com.project.entity.Prescription;
-import com.project.repository.PrescriptionRepository;
+import com.project.service.PrescriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,37 +13,36 @@ import java.util.List;
 public class PrescriptionController {
 
     @Autowired
-    private PrescriptionRepository prescriptionRepository;
+    private PrescriptionService prescriptionService;
 
     @PostMapping
     public Prescription create(@RequestParam Long doctorId, @RequestBody Prescription prescription) {
-        prescription.setDoctorId(doctorId);
-        return prescriptionRepository.save(prescription);
+        return prescriptionService.create(doctorId, prescription);
     }
 
     @GetMapping
     public List<Prescription> getAll() {
-        return prescriptionRepository.findAll();
+        return prescriptionService.getAll();
     }
 
     @GetMapping("/patient/{patientId}")
     public List<Prescription> getByPatient(@PathVariable Long patientId) {
-        return prescriptionRepository.findByPatientId(patientId);
+        return prescriptionService.getByPatientId(patientId);
     }
 
     @GetMapping("/doctor/{doctorId}")
     public List<Prescription> getByDoctor(@PathVariable Long doctorId) {
-        return prescriptionRepository.findByDoctorId(doctorId);
+        return prescriptionService.getByDoctorId(doctorId);
     }
 
     @GetMapping("/status/{status}")
     public List<Prescription> getByStatus(@PathVariable String status) {
-        return prescriptionRepository.findByStatus(status);
+        return prescriptionService.getByStatus(status);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Prescription> getById(@PathVariable Long id) {
-        return prescriptionRepository.findById(id)
+        return prescriptionService.getById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -54,23 +53,23 @@ public class PrescriptionController {
             @RequestParam String status, 
             @RequestParam(required = false) Long pharmacistId) {
         try {
-            return prescriptionRepository.findById(id).map(p -> {
-                p.setStatus(status);
-                if (pharmacistId != null) {
-                    p.setPharmacistId(pharmacistId);
-                }
-                return ResponseEntity.ok((Object) prescriptionRepository.save(p));
-            }).orElse(ResponseEntity.status(404).body(java.util.Map.of("error", "Prescription not found with ID: " + id)));
-        } catch (Exception e) {
+            Prescription updated = prescriptionService.updateStatus(id, status, pharmacistId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
+            }
             return ResponseEntity.status(500).body(java.util.Map.of("error", "Database transaction failed: " + e.getMessage()));
         }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        return prescriptionRepository.findById(id).map(p -> {
-            prescriptionRepository.delete(p);
+        try {
+            prescriptionService.delete(id);
             return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
